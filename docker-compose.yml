@@ -1,0 +1,58 @@
+version: '2'
+
+services:
+
+  dc:
+    image: google/cadvisor
+    volumes:
+      #- /../:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    expose:
+      - "8080"
+    ports:
+      - "19990:8080"
+
+  dh:
+    image: prom/node-exporter
+    volumes:
+      - /proc:/host/proc
+      - /sys:/host/sys
+      #- /:/rootfs
+      - /etc/hostname:/etc/host_hostname
+    command:
+      - -collector.procfs
+      -   /host/proc
+      - -collector.sysfs
+      -   /host/sys
+      #- -collector.filesystem.ignored-mount-points
+      #-   "^/(sys|proc|dev|host|etc)($|/)"
+      - -collector.textfile.directory
+      -   /etc/node-exporter/
+      - -collectors.enabled
+      -   "conntrack,diskstats,entropy,filefd,filesystem,loadavg,mdadm,meminfo,netdev,netstat,stat,textfile,time,vmstat,ipvs"
+    expose:
+      - "9100"
+    ports:
+      - "19991:9100"
+
+  prom:
+    image: prom/prometheus
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus:/prometheus
+    expose:
+      - "9090"
+    ports:
+      - "19992:9090"
+
+  grafana:
+    image: grafana/grafana
+    environment:
+      - "GF_SERVER_ROOT_URL=http://localhost:19993"
+      - "GF_SECURITY_ADMIN_PASSWORD=grafana"
+    expose:
+      - "3000"
+    ports:
+      - "19993:3000"
